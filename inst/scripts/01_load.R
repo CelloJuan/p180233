@@ -6,8 +6,12 @@ d <- CelloLoad::load_cello('//chidns-mediauk/insight media (charterhouse)$/Resea
 d1 <- d$data %>% 
   .[status == 'complete']
 
-# identify respondent id variable
+# identify respondent id and country variable
 id_mask <- 'respid'
+country_mask <- 'h0'
+
+# transfrom country to factor
+d1[, 'country' := haven::as_factor(get(country_mask))]
 
 
 #### identify proportion of progression ####
@@ -29,7 +33,17 @@ d1[, ..q14_mask]
 q9_mask <- d1 %>% 
   names %>% 
   stringr::str_subset('q9_a_([1-8])')
-d1[,..q9_mask]
+
+# fix labels for q9
+new_labs <- c('Localised Prostate Cancer (LPC)  and Locally Advanced Prostate Cancer (LAPC)', 
+              'Indolent disease',
+              'Non-Metastatic Hormone Sensitive Prostate Cancer (M0 HS PC)',
+              'Non-Metastatic Castrate Resistant Prostate Cancer (M0 CR PC)',
+              'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC)',
+              'De Novo Metastatic Prostate Cancer (De Novo M1 PC)',
+              'Metastatic Castrate Resistant Prostate Cancer (M1 CR PC)',
+              'Other')
+d$labels[variable %in% q9_mask, 'label' := new_labs]
 
 
 #### identify % of direct progression to prostate cancer ####
@@ -40,7 +54,9 @@ d1[,..q9_mask]
 q11_mask <- d1 %>% 
   names %>% 
   stringr::str_subset('q11')
-
+new_labs <- c('Non-Metastatic Hormone Sensitive Prostate Cancer (M0 HS PC)', 
+              'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC)')
+d$labels[variable %in% q11_mask, 'label' := new_labs]
 
 #### identify progression from LPC and LAPC ####
 # Thinking of your last 5 patients who progressed from Localised Prostate Cancer (LPC) 
@@ -49,10 +65,48 @@ q11_mask <- d1 %>%
 # 
 # Please provide your best estimate in years and months (0-11).
 # format q12_x_y_z where x = y (years) or m (months), y = 1:5 patient id, z = 1 (M0 HS PC) or 2 (M1 HS PC)
-q12_mask <- d1 %>% 
+q12_mask0 <- d1 %>% 
   names %>% 
   stringr::str_subset('q12')
 
+# calculate single duration variables in months
+aux_d <- d1[,c(id_mask, q12_mask0), with = F] %>% 
+  data.table::melt.data.table(id.vars = id_mask) %>% 
+  .[, 'time_metric' := ifelse(stringr::str_detect(variable, 'y'), 'years', 'months')] %>% 
+  .[, 'patient' := paste0('q12new_',stringr::str_replace_all(variable, '^(q12_.{1}_)|(_.{1})$', ''))] %>% 
+  .[, 'cancer' := stringr::str_replace_all(variable, 'q12_.{1}_.{1}_', '')] %>% 
+  data.table::dcast.data.table(respid + patient + cancer ~ time_metric,
+                               value.var = 'value') %>% 
+  .[, 'new_months' := years * 12 + months]
+aux_d <- data.table::rbindlist(list(aux_d,
+                                    aux_d %>% 
+                                      .[, mean(new_months, na.rm = TRUE), by = c('respid', 'cancer')] %>% 
+                                      .[, 'patient' := 'q12new_tot'] %>% 
+                                      .[, 'new_months' := V1] %>% 
+                                      .[, 'V1' := NULL]),
+                               fill = TRUE) %>% 
+  data.table::dcast.data.table(respid ~ patient + cancer,
+                               value.var = 'new_months')
+d1 <- d1[aux_d]
+q12_mask <- d1 %>% 
+  names %>% 
+  stringr::str_subset('q12new')
+
+d$labels <- rbind(d$labels,data.table::data.table(variable = q12_mask,
+                                   label = c('Non-Metastatic Hormone Sensitive Prostate Cancer (M0 HS PC) - Patient 1',
+                                             'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Patient 1',
+                                             'Non-Metastatic Hormone Sensitive Prostate Cancer (M0 HS PC) - Patient 2',
+                                             'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Patient 2',
+                                             'Non-Metastatic Hormone Sensitive Prostate Cancer (M0 HS PC) - Patient 3',
+                                             'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Patient 3',
+                                             'Non-Metastatic Hormone Sensitive Prostate Cancer (M0 HS PC) - Patient 4',
+                                             'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Patient 4',
+                                             'Non-Metastatic Hormone Sensitive Prostate Cancer (M0 HS PC) - Patient 5',
+                                             'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Patient 5',
+                                             'Non-Metastatic Hormone Sensitive Prostate Cancer (M0 HS PC) - Total',
+                                             'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Total')))
+
+d$labels[variable %in% q12_mask]
 
 #### identify progression from M0 HS PC ####
 # Thinking of your last 5 patients who progressed from Non-Metastatic Hormone Sensitive 

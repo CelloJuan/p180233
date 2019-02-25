@@ -1,0 +1,151 @@
+---
+title: "p 180233 - Weighting Walkthrough"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+    number_sections: yes
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+date: "`r format(Sys.time(), '%d/%m/%Y')`"
+---
+
+```{r 'options', echo=FALSE, message=FALSE}
+source('../scripts/checkpoint.R')
+```
+
+```{r 'data load', cache=TRUE, echo=FALSE, message=FALSE}
+source('../scripts/01_load.R')
+```
+
+# Descriptive Analysis
+
+We begin with a high-level description of our data to ensure all the relevant measures are being used and matched observed tabs obtained from DP.
+
+## Q9 Patient Case Load
+```{r 'q9_descr', echo=FALSE}
+d2 <- d1[, c(id_mask, 'country', q9_mask), with = F] %>% 
+  data.table::melt.data.table(id.vars = c(id_mask, 'country'),
+                              variable.factor = FALSE)
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, mean(value), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Average Patient Load - Q9') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, .N, by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'N') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Bases - Q9') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+```
+
+## Q11 Patient Progresion to Prostate Cancer
+
+```{r 'q11_descr', echo=FALSE}
+d2 <- d1[, c(id_mask, 'country', q11_mask), with = F] %>% 
+  data.table::melt.data.table(id.vars = c(id_mask, 'country'),
+                              variable.factor = FALSE)
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, mean(value, na.rm = TRUE), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Average Proportional Progression (%) - Q11') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, .N, by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'N') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Bases - Q11') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+```
+
+## Q12 Length of Time to Progression
+```{r 'q12_descr', echo=FALSE}
+d2 <- d1[, c(id_mask, 'country', q12_mask), with = F] %>% 
+  data.table::melt.data.table(id.vars = c(id_mask, 'country'),
+                              variable.factor = FALSE)
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, mean(value), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Average Time to Progression (months) - Q12') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, .N, by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'N') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Bases - Q12') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+```
+
+# Weight Calculations
+
+## LOC/LAPC
+
+
+```{r loc_weights, echo=FALSE}
+d1[, 'q9_prop_q11' := q9_a_1 * (q11_1 + q11_2)/100]
+
+d1[, c(id_mask, 'country', 'q9_a_1', q11_mask, 'q9_prop_q11'), with = F] %>% 
+  head(10) %>% print
+
+d1[, c('country', 'q9_prop_q11'), with = F] %>% 
+  .[, mean(q9_prop_q11, na.rm = TRUE), by = 'country'] %>% 
+  data.table::setnames('V1', 'Re-prop. Q9') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Average case load, reproportioned by progression - Q9 * Q11') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+aux_d <- d1[, c('country', 'q9_prop_q11'), with = F] %>% 
+  .[, mean(q9_prop_q11, na.rm = TRUE), by = 'country'] %>% 
+  data.table::setnames('V1', 'q9_prop_q11_mean')
+
+d1 <- d1[aux_d, on = 'country']
+
+d1[, 'weight_1' := q9_prop_q11/q9_prop_q11_mean] %>% 
+  .[, 'weight_1' := ifelse(weight_1 > 3, 3, weight_1)]
+
+d1[, c(id_mask, 'country', 'q9_a_1', q11_mask, 'q9_prop_q11', 'q9_prop_q11_mean', 'weight_1'), with = F] %>% 
+  head(10) %>% 
+  print
+
+```
+
+
