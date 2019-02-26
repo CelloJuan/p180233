@@ -18,11 +18,9 @@ date: "`r format(Sys.time(), '%d/%m/%Y')`"
 
 ```{r 'options', echo=FALSE, message=FALSE}
 source('../scripts/checkpoint.R')
-library(data.table)
-library(magrittr)
 ```
 
-```{r 'data load', echo=FALSE, cache=TRUE, message=FALSE}
+```{r 'data load', echo=FALSE, message=FALSE}
 source('../scripts/01_load.R')
 ```
 
@@ -47,8 +45,8 @@ d$labels[d2, on = 'variable'] %>%
                             bootstrap_options = c("striped", "hover"))
 
 d$labels[d2, on = 'variable'] %>% 
-  .[, .N, by = c('country', 'label', 'variable')] %>% 
-  data.table::dcast.data.table(variable + label ~ country, value.var = 'N') %>% 
+  .[, sum(!is.na(value)), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
   kableExtra::kable(digits = 1,
                     escape = F,
                     caption = 'Bases - Q9') %>% 
@@ -76,8 +74,8 @@ d$labels[d2, on = 'variable'] %>%
                             bootstrap_options = c("striped", "hover"))
 
 d$labels[d2, on = 'variable'] %>% 
-  .[, .N, by = c('country', 'label', 'variable')] %>% 
-  data.table::dcast.data.table(variable + label ~ country, value.var = 'N') %>% 
+  .[, sum(!is.na(value)), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
   kableExtra::kable(digits = 1,
                     escape = F,
                     caption = 'Bases - Q11') %>% 
@@ -103,8 +101,8 @@ d$labels[d2, on = 'variable'] %>%
                             bootstrap_options = c("striped", "hover"))
 
 d$labels[d2, on = 'variable'] %>% 
-  .[, .N, by = c('country', 'label', 'variable')] %>% 
-  data.table::dcast.data.table(variable + label ~ country, value.var = 'N') %>% 
+  .[, sum(!is.na(value)), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
   kableExtra::kable(digits = 1,
                     escape = F,
                     caption = 'Bases - Q12') %>% 
@@ -118,154 +116,241 @@ d$labels[d2, on = 'variable'] %>%
 
 ## LOC/LAPC
 ```{r loc_weights, echo=FALSE}
-d1[, 'q9_prop_q11' := q9_a_1 * (q11_1 + q11_2)/100]
+d1[, 'q9_prop_q11_1' := q9_a_1 * q11_1/100]
+d1[, 'q9_prop_q11_2' := q9_a_1 * q11_2/100]
 
-d1[, c(id_mask, 'country', 'q9_a_1', q11_mask, 'q9_prop_q11'), with = F] %>% 
+d1[, c(id_mask, 'country', 'q9_a_1', q11_mask, 'q9_prop_q11_1', 'q9_prop_q11_2'), with = F] %>% 
   head(10) %>% print
 
-d1[, c('country', 'q9_prop_q11'), with = F] %>% 
-  .[, mean(q9_prop_q11, na.rm = TRUE), by = 'country'] %>% 
+d1[, c('country', 'q9_prop_q11_1'), with = F] %>% 
+  .[, mean(q9_prop_q11_1, na.rm = TRUE), by = 'country'] %>% 
   data.table::setnames('V1', 'Re-prop. Q9') %>% 
   kableExtra::kable(digits = 1,
                     escape = F,
-                    caption = 'Average case load, reproportioned by progression - Q9 * Q11') %>% 
+                    caption = 'Average case load, reproportioned by progression to M0 HS PC - Q9_1 * Q11_1') %>% 
   kableExtra::kable_styling(full_width = FALSE, 
                             position = 'center',
                             bootstrap_options = c("striped", "hover"))
 
-aux_d <- d1[, c('country', 'q9_prop_q11'), with = F] %>% 
-  .[, mean(q9_prop_q11, na.rm = TRUE), by = 'country'] %>% 
-  data.table::setnames('V1', 'q9_prop_q11_mean')
+d1[, c('country', 'q9_prop_q11_2'), with = F] %>% 
+  .[, mean(q9_prop_q11_2, na.rm = TRUE), by = 'country'] %>% 
+  data.table::setnames('V1', 'Re-prop. Q9') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Average case load, reproportioned by progression to M1 HS PC - Q9_1 * Q11_2') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+
+aux_d <- d1[, c('country', 'q9_prop_q11_1', 'q9_prop_q11_2'), with = F] %>% 
+  .[, list(mean(q9_prop_q11_1, na.rm = TRUE),
+           mean(q9_prop_q11_2, na.rm = TRUE)),
+    by = 'country'] %>% 
+  data.table::setnames(c('V1', 'V2'), c('q9_prop_q11_1_mean','q9_prop_q11_2_mean'))
 
 d1 <- d1[aux_d, on = 'country']
 
-d1[, 'weight_1' := q9_prop_q11/q9_prop_q11_mean] %>% 
-  .[, 'weight_1' := ifelse(weight_1 > 3, 3, weight_1)] %>% 
-  .[, 'weight_1' := ifelse(weight_1 < 0.3, 0.3, weight_1)]
+d1[, 'weight_1_1' := q9_prop_q11_1/q9_prop_q11_1_mean] %>% 
+  .[, 'weight_1_1' := ifelse(weight_1_1 > 3, 3, weight_1_1)] %>% 
+  .[, 'weight_1_1' := ifelse(weight_1_1 < 0.3, 0.3, weight_1_1)]
 
-d1[, c(id_mask, 'country', 'q9_a_1', q11_mask, 'q9_prop_q11', 'q9_prop_q11_mean', 'weight_1'), with = F] %>% 
+d1[, 'weight_1_2' := q9_prop_q11_2/q9_prop_q11_2_mean] %>% 
+  .[, 'weight_1_2' := ifelse(weight_1_2 > 3, 3, weight_1_2)] %>% 
+  .[, 'weight_1_2' := ifelse(weight_1_2 < 0.3, 0.3, weight_1_2)]
+
+d1[, c(id_mask, 
+       'country', 
+       'q9_a_1', 
+       q11_mask, 
+       'q9_prop_q11_1', 
+       'q9_prop_q11_2', 
+       'q9_prop_q11_1_mean', 
+       'q9_prop_q11_2_mean', 
+       'weight_1_1', 'weight_1_2'), with = F] %>% 
   head(10) %>% 
   print
 
-d1[['weight_1']] %>% hist
-
+d1[['weight_1_1']] %>% hist(main = 'weight_1_1')
+d1[['weight_1_2']] %>% hist(main = 'weight_1_2')
 ```
 
 ## M0 HS
 ```{r m0hs_weights, echo=FALSE}
-d1[, 'q9_prop_q14' := q9_a_3 * (q14_1 + q14_2 + q14_3)/100]
+d1[, 'q9_prop_q14_1' := q9_a_3 * q14_1/100]
+d1[, 'q9_prop_q14_2' := q9_a_3 * q14_2/100]
+d1[, 'q9_prop_q14_3' := q9_a_3 * q14_3/100]
 
-d1[, c(id_mask, 'country', 'q9_a_3', q11_mask, 'q9_prop_q14'), with = F] %>% 
+d1[, c(id_mask, 'country', 'q9_a_3', q14_mask, 'q9_prop_q14_1', 'q9_prop_q14_2', 'q9_prop_q14_3'), with = F] %>% 
   head(10) %>% print
 
-d1[, c('country', 'q9_prop_q14'), with = F] %>% 
-  .[, mean(q9_prop_q14, na.rm = TRUE), by = 'country'] %>% 
-  data.table::setnames('V1', 'Re-prop. Q14') %>% 
+d1[, c('country', 'q9_prop_q14_1'), with = F] %>% 
+  .[, mean(q9_prop_q14_1, na.rm = TRUE), by = 'country'] %>% 
+  data.table::setnames('V1', 'Re-prop. Q9') %>% 
   kableExtra::kable(digits = 1,
                     escape = F,
-                    caption = 'Average case load, reproportioned by progression - Q9 * Q14') %>% 
+                    caption = 'Average case load, reproportioned by progression to M0 CR PC - Q9_3 * Q14_1') %>% 
   kableExtra::kable_styling(full_width = FALSE, 
                             position = 'center',
                             bootstrap_options = c("striped", "hover"))
 
-aux_d <- d1[, c('country', 'q9_prop_q14'), with = F] %>% 
-  .[, mean(q9_prop_q14, na.rm = TRUE), by = 'country'] %>% 
-  data.table::setnames('V1', 'q9_prop_q14_mean')
-
-d1 <- d1[aux_d, on = 'country']
-
-d1[, 'weight_2' := q9_prop_q14/q9_prop_q14_mean] %>% 
-  .[, 'weight_2' := ifelse(weight_2 > 3, 3, weight_2)] %>% 
-  .[, 'weight_2' := ifelse(weight_2 < 0.3, 0.3, weight_2)]
-
-d1[, c(id_mask, 'country', 'q9_a_3', q14_mask, 'q9_prop_q14', 'q9_prop_q14_mean', 'weight_2'), with = F] %>% 
-  head(10) %>% 
-  print
-
-d1[['weight_2']] %>% hist
-
-```
-
-## mCRPC L1
-```{r mCRPC_l1_weights, echo=FALSE}
-d1[, 'q9_prop_q25l1' := q9_a_7 * q25_1/100]
-
-d1[, c(id_mask, 'country', 'q9_a_7', 'q25_1', 'q9_prop_q25l1'), with = F] %>% 
-  head(10) %>% print
-
-d1[, c('country', 'q9_prop_q25l1'), with = F] %>% 
-  .[, mean(q9_prop_q25l1, na.rm = TRUE), by = 'country'] %>% 
-  data.table::setnames('V1', 'Re-prop. Q25_1') %>% 
+d1[, c('country', 'q9_prop_q14_2'), with = F] %>% 
+  .[, mean(q9_prop_q14_2, na.rm = TRUE), by = 'country'] %>% 
+  data.table::setnames('V1', 'Re-prop. Q9') %>% 
   kableExtra::kable(digits = 1,
                     escape = F,
-                    caption = 'Average case load, reproportioned by progression - Q9 * Q25') %>% 
+                    caption = 'Average case load, reproportioned by progression to M1 HS PC - Q9_3 * Q14_2') %>% 
   kableExtra::kable_styling(full_width = FALSE, 
                             position = 'center',
                             bootstrap_options = c("striped", "hover"))
 
-aux_d <- d1[, c('country', 'q9_prop_q25l1'), with = F] %>% 
-  .[, mean(q9_prop_q25l1, na.rm = TRUE), by = 'country'] %>% 
-  data.table::setnames('V1', 'q9_prop_q25l1_mean')
-
-d1 <- d1[aux_d, on = 'country']
-
-d1[, 'weight_3' := q9_prop_q25l1/q9_prop_q25l1_mean] %>% 
-  .[, 'weight_3' := ifelse(weight_3 > 3, 3, weight_3)] %>% 
-  .[, 'weight_3' := ifelse(weight_3 < 0.3, 0.3, weight_3)]
-
-d1[, c(id_mask, 'country', 'q9_a_7', 'q25_1', 'q9_prop_q25l1', 'q9_prop_q25l1_mean', 'weight_3'), with = F] %>% 
-  head(10) %>% 
-  print
-
-d1[['weight_3']] %>% hist
-
-```
-
-
-## mCRPC L2
-```{r mCRPC_l2_weights, echo=FALSE}
-d1[, 'q9_prop_q25l2' := q9_a_7 * q25_2/100]
-
-d1[, c(id_mask, 'country', 'q9_a_7', 'q25_2', 'q9_prop_q25l2'), with = F] %>% 
-  head(10) %>% print
-
-d1[, c('country', 'q9_prop_q25l2'), with = F] %>% 
-  .[, mean(q9_prop_q25l2, na.rm = TRUE), by = 'country'] %>% 
-  data.table::setnames('V1', 'Re-prop. Q25_2') %>% 
+d1[, c('country', 'q9_prop_q14_3'), with = F] %>% 
+  .[, mean(q9_prop_q14_3, na.rm = TRUE), by = 'country'] %>% 
+  data.table::setnames('V1', 'Re-prop. Q9') %>% 
   kableExtra::kable(digits = 1,
                     escape = F,
-                    caption = 'Average case load, reproportioned by progression - Q9 * Q25') %>% 
+                    caption = 'Average case load, reproportioned by progression to M1 CR PC - Q9_3 * Q14_3') %>% 
   kableExtra::kable_styling(full_width = FALSE, 
                             position = 'center',
                             bootstrap_options = c("striped", "hover"))
 
-aux_d <- d1[, c('country', 'q9_prop_q25l2'), with = F] %>% 
-  .[, mean(q9_prop_q25l2, na.rm = TRUE), by = 'country'] %>% 
-  data.table::setnames('V1', 'q9_prop_q25l2_mean')
+
+aux_d <- d1[, c('country', 'q9_prop_q14_1', 'q9_prop_q14_2', 'q9_prop_q14_3'), with = F] %>% 
+  .[, list(mean(q9_prop_q14_1, na.rm = TRUE),
+           mean(q9_prop_q14_2, na.rm = TRUE),
+           mean(q9_prop_q14_3, na.rm = TRUE)),
+    by = 'country'] %>% 
+  data.table::setnames(c('V1', 'V2', 'V3'), c('q9_prop_q14_1_mean','q9_prop_q14_2_mean', 'q9_prop_q14_3_mean'))
 
 d1 <- d1[aux_d, on = 'country']
 
-d1[, 'weight_4' := q9_prop_q25l2/q9_prop_q25l2_mean] %>% 
-  .[, 'weight_4' := ifelse(weight_4 > 3, 3, weight_4)] %>% 
-  .[, 'weight_4' := ifelse(weight_4 < 0.3, 0.3, weight_4)]
+d1[, 'weight_2_1' := q9_prop_q14_1/q9_prop_q14_1_mean] %>% 
+  .[, 'weight_2_1' := ifelse(weight_2_1 > 3, 3, weight_2_1)] %>% 
+  .[, 'weight_2_1' := ifelse(weight_2_1 < 0.3, 0.3, weight_2_1)]
 
-d1[, c(id_mask, 'country', 'q9_a_7', 'q25_2', 'q9_prop_q25l2', 'q9_prop_q25l2_mean', 'weight_4'), with = F] %>% 
+d1[, 'weight_2_2' := q9_prop_q14_2/q9_prop_q14_2_mean] %>% 
+  .[, 'weight_2_2' := ifelse(weight_2_2 > 3, 3, weight_2_2)] %>% 
+  .[, 'weight_2_2' := ifelse(weight_2_2 < 0.3, 0.3, weight_2_2)]
+
+d1[, 'weight_2_3' := q9_prop_q14_3/q9_prop_q14_3_mean] %>% 
+  .[, 'weight_2_3' := ifelse(weight_2_3 > 3, 3, weight_2_3)] %>% 
+  .[, 'weight_2_3' := ifelse(weight_2_3 < 0.3, 0.3, weight_2_3)]
+
+d1[, c(id_mask, 
+       'country', 
+       'q9_a_1', 
+       q11_mask, 
+       'q9_prop_q14_1', 
+       'q9_prop_q14_2',
+       'q9_prop_q14_3',
+       'q9_prop_q14_1_mean', 
+       'q9_prop_q14_2_mean',
+       'q9_prop_q14_3_mean',
+       'weight_2_1', 'weight_2_2', 'weight_2_3'), with = F] %>% 
   head(10) %>% 
   print
 
-d1[['weight_4']] %>% hist
-
+d1[['weight_2_1']] %>% hist(main = 'weight_2_1')
+d1[['weight_2_2']] %>% hist(main = 'weight_2_2')
+d1[['weight_2_3']] %>% hist(main = 'weight_2_3')
 ```
-
-```{r export, echo=FALSE}
-data.table::fwrite(d1[, c(id_mask, 'weight_1', 'weight_2', 'weight_3', 'weight_4'), with = F],
-                   file = '180233_weights.csv')
-```
-
 
 # Weighted Means and Medians
 
 ## LOC/LAPC
-```{r loc_stats, echo=FALSE}
+```{r loc_out_stats, echo=FALSE}
+out_1 <- data.table::rbindlist(list(d1[, .(country, 
+                                           q12new_tot_1,
+                                           q12new_tot_2,
+                                           weight_1_1,
+                                           weight_1_2)] %>% 
+                                      .[complete.cases(.)] %>% 
+                                      .[, list(M0HsPC_wtmean = weighted.mean(q12new_tot_1, weight_1_1),
+                                               M0HsPC_wtmedian = matrixStats::weightedMedian(q12new_tot_1, weight_1_1),
+                                               M1HsPC_wtmean = weighted.mean(q12new_tot_2, weight_1_2),
+                                               M1HsPC_wtmedian = matrixStats::weightedMedian(q12new_tot_2, weight_1_2))] %>% 
+                                      .[, 'country' := 'Total'],
+                                    d1[, .(country, 
+                                           q12new_tot_1,
+                                           q12new_tot_2,
+                                           weight_1_1,
+                                           weight_1_2)] %>% 
+                                      .[complete.cases(.)] %>% 
+                                      .[, list(M0HsPC_wtmean = weighted.mean(q12new_tot_1, weight_1_1),
+                                               M0HsPC_wtmedian = matrixStats::weightedMedian(q12new_tot_1, weight_1_1),
+                                               M1HsPC_wtmean = weighted.mean(q12new_tot_2, weight_1_2),
+                                               M1HsPC_wtmedian = matrixStats::weightedMedian(q12new_tot_2, weight_1_2)),
+                                        by = 'country']),
+                               use.names = TRUE) %>% 
+  data.table::setcolorder(c(5, 1:4)) %>% 
+  data.table::melt.data.table(id.vars = 'country',
+                              variable.name = 'variable') %>% 
+  .[, 'stat' := stringr::str_replace(variable, '.*_','')] %>% 
+  .[, 'stage' := stringr::str_replace(variable, '_.*', '')] %>% 
+  .[, 'variable' := NULL] %>% 
+  data.table::dcast.data.table(country + stat ~ stage, 
+                               value.var = 'value') %>% 
+  .[, 'LOC/LAPC' := (M0HsPC + M1HsPC)/2] %>% 
+  .[order(stat)]
 
+out_1 %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Weighted time to progression (months) LOC/LAPC') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+```
+
+## M0 HS
+```{r m0hs_out_stats, echo=FALSE}
+out_2 <- data.table::rbindlist(list(d1[, .(country, 
+                                           q15new_tot_1,
+                                           q15new_tot_2,
+                                           q15new_tot_3,
+                                           weight_2_1,
+                                           weight_2_2,
+                                           weight_2_3)] %>% 
+                                      .[complete.cases(.)] %>% 
+                                      .[, list(M0CRPC_wtmean = weighted.mean(q15new_tot_1, weight_2_1),
+                                               M0CRPC_wtmedian = matrixStats::weightedMedian(q15new_tot_1, weight_2_1),
+                                               M1HsPC_wtmean = weighted.mean(q15new_tot_2, weight_2_2),
+                                               M1HsPC_wtmedian = matrixStats::weightedMedian(q15new_tot_2, weight_2_2),
+                                               M1CRPC_wtmean = weighted.mean(q15new_tot_3, weight_2_3),
+                                               M1CRPC_wtmedian = matrixStats::weightedMedian(q15new_tot_3, weight_2_3))] %>% 
+                                      .[, 'country' := 'Total'],
+                                    d1[, .(country, 
+                                           q15new_tot_1,
+                                           q15new_tot_2,
+                                           q15new_tot_3,
+                                           weight_2_1,
+                                           weight_2_2,
+                                           weight_2_3)] %>% 
+                                      .[complete.cases(.)] %>% 
+                                      .[, list(M0CRPC_wtmean = weighted.mean(q15new_tot_1, weight_2_1),
+                                               M0CRPC_wtmedian = matrixStats::weightedMedian(q15new_tot_1, weight_2_1),
+                                               M1HsPC_wtmean = weighted.mean(q15new_tot_2, weight_2_2),
+                                               M1HsPC_wtmedian = matrixStats::weightedMedian(q15new_tot_2, weight_2_2),
+                                               M1CRPC_wtmean = weighted.mean(q15new_tot_3, weight_2_3),
+                                               M1CRPC_wtmedian = matrixStats::weightedMedian(q15new_tot_3, weight_2_3)),
+                                        by = 'country']),
+                               use.names = TRUE) %>% 
+  data.table::setcolorder(c(5, 1:4)) %>% 
+  data.table::melt.data.table(id.vars = 'country',
+                              variable.name = 'variable') %>% 
+  .[, 'stat' := stringr::str_replace(variable, '.*_','')] %>% 
+  .[, 'stage' := stringr::str_replace(variable, '_.*', '')] %>% 
+  .[, 'variable' := NULL] %>% 
+  data.table::dcast.data.table(country + stat ~ stage, 
+                               value.var = 'value') %>% 
+  .[, 'M0HS' := (M0CRPC + M1CRPC + M1HsPC)/3] %>% 
+  .[order(stat)]
+
+out_2 %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Weighted time to progression (months) M0 HS') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
 ```

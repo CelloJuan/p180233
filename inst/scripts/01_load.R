@@ -120,9 +120,55 @@ d$labels[variable %in% q12_mask]
 #
 # Please provide your best estimate in years and months (0-11)
 # format q15_x_y_z where x = y (years) or m (months), y = 1:5 patient id, z = 1 (M0 CR PC) or 2 (M1 HS PC) or 3 (Ms CR PC)
-q15_mask <- d1 %>% 
+q15_mask0 <- d1 %>% 
   names %>% 
   stringr::str_subset('q15')
+
+# calculate single duration variables in months
+aux_d <- d1[,c(id_mask, q15_mask0), with = F] %>% 
+  data.table::melt.data.table(id.vars = id_mask) %>% 
+  .[, 'time_metric' := ifelse(stringr::str_detect(variable, 'y'), 'years', 'months')] %>% 
+  .[, 'patient' := paste0('q15new_',stringr::str_replace_all(variable, '^(q15_.{1}_)|(_.{1})$', ''))] %>% 
+  .[, 'cancer' := stringr::str_replace_all(variable, 'q15_.{1}_.{1}_', '')] %>% 
+  data.table::dcast.data.table(respid + patient + cancer ~ time_metric,
+                               value.var = 'value') %>% 
+  .[, 'new_months' := years * 12 + months]
+aux_d <- data.table::rbindlist(list(aux_d,
+                                    aux_d %>% 
+                                      .[, mean(new_months, na.rm = TRUE), by = c('respid', 'cancer')] %>% 
+                                      .[, 'patient' := 'q15new_tot'] %>% 
+                                      .[, 'new_months' := V1] %>% 
+                                      .[, 'V1' := NULL]),
+                               fill = TRUE) %>% 
+  data.table::dcast.data.table(respid ~ patient + cancer,
+                               value.var = 'new_months')
+d1 <- d1[aux_d]
+q15_mask <- d1 %>%
+  names %>%
+  stringr::str_subset('q15new')
+
+d$labels <- rbind(d$labels,data.table::data.table(variable = q15_mask,
+                                                  label = c('Non-Metastatic Castrate Resistant Prostate Cancer (M0 CR PC) - Patient 1',
+                                                            'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Patient 1',
+                                                            'Metastatic Castrate Resistant Prostate Cancer (M1 CR PC) - Patient 1',
+                                                            'Non-Metastatic Castrate Resistant Prostate Cancer (M0 CR PC) - Patient 2',
+                                                            'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Patient 2',
+                                                            'Metastatic Castrate Resistant Prostate Cancer (M1 CR PC) - Patient 2',
+                                                            'Non-Metastatic Castrate Resistant Prostate Cancer (M0 CR PC) - Patient 3',
+                                                            'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Patient 3',
+                                                            'Metastatic Castrate Resistant Prostate Cancer (M1 CR PC) - Patient 3',
+                                                            'Non-Metastatic Castrate Resistant Prostate Cancer (M0 CR PC) - Patient 4',
+                                                            'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Patient 4',
+                                                            'Metastatic Castrate Resistant Prostate Cancer (M1 CR PC) - Patient 4',
+                                                            'Non-Metastatic Castrate Resistant Prostate Cancer (M0 CR PC) - Patient 5',
+                                                            'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Patient 5',
+                                                            'Metastatic Castrate Resistant Prostate Cancer (M1 CR PC) - Patient 5',
+                                                            'Non-Metastatic Castrate Resistant Prostate Cancer (M0 CR PC) - Total',
+                                                            'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC) - Total',
+                                                            'Metastatic Castrate Resistant Prostate Cancer (M1 CR PC) - Total')))
+
+d$labels[variable %in% q15_mask]
+
 
 
 #### identify M1 CR PC Line of Treatment proportions ####

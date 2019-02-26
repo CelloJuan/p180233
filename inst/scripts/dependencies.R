@@ -1,5 +1,3 @@
-library(data.table)
-library(magrittr)
 library(caTools)
 library(bitops)
 library(knitr)
