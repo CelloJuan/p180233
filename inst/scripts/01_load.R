@@ -21,7 +21,12 @@ d1[, 'country' := haven::as_factor(get(country_mask))]
 q14_mask <- d1 %>% 
   names %>% 
   stringr::str_subset('q14')
-d1[, ..q14_mask]
+
+# fix labels for q14
+new_labs <- c('Non-Metastatic Castrate Resistant Prostate Cancer (M0 CR PC)', 
+              'Metastatic Hormone Sensitive Prostate Cancer (M1 HS PC)',
+              'Metastatic Castrate Resistant Prostate Cancer (M1 CR PC)')
+d$labels[variable %in% q14_mask, 'label' := new_labs]
 
 
 #### identify patient case load ####

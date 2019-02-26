@@ -3,4 +3,5 @@
 .RData
 .Ruserdata
 inst/notebooks/02_weighting_cache
+inst/notebooks/02_weighting_files
 inst/notebooks/*.html
