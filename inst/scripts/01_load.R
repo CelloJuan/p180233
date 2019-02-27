@@ -194,6 +194,21 @@ q26_mask <- d1 %>%
   names %>% 
   stringr::str_subset('q26_.{1}_([1-9]){1}$')
 
+q26b_mask <- q26_mask %>% stringr::str_subset('b')
+q26a_mask <- q26_mask %>% stringr::str_subset('a')
+
+aux_d <- d1[, c(id_mask, 'country', q26a_mask, q26b_mask), with = F] %>% 
+  data.table::melt.data.table(id.vars = c(id_mask, 'country')) %>% 
+  .[, 'metric' := ifelse(stringr::str_detect(variable, 'a'), 'proportion', 'duration')] %>% 
+  .[, 'treatment' := paste0('q26treat_', stringr::str_extract(variable, '\\d{1}$'))] %>% 
+  data.table::dcast.data.table(respid + country + treatment ~ metric,
+                               value.var = 'value') %>% 
+  .[, 'duration' := duration * proportion/100] %>% 
+  .[, sum(duration, na.rm = TRUE), by = 'respid'] %>% 
+  data.table::setnames('V1', 'q26duration')
+
+d1 <- d1[aux_d]
+
 
 #### identify M1 CR PC 2nd Line Treatment progression ####
 # Of the [INSERT CODE 07 @ Q9] patients with Metastatic Castrate Resistant Prostate Cancer (M1 CR PC) currently on 
@@ -208,3 +223,22 @@ q26_mask <- d1 %>%
 q27_mask <- d1 %>% 
   names %>% 
   stringr::str_subset('q27_.{1}_([1-9]){1}$')
+
+q27_mask <- d1 %>% 
+  names %>% 
+  stringr::str_subset('q27_.{1}_([1-9]){1}$')
+
+q27b_mask <- q27_mask %>% stringr::str_subset('b')
+q27a_mask <- q27_mask %>% stringr::str_subset('a')
+
+aux_d <- d1[, c(id_mask, 'country', q27a_mask, q27b_mask), with = F] %>% 
+  data.table::melt.data.table(id.vars = c(id_mask, 'country')) %>% 
+  .[, 'metric' := ifelse(stringr::str_detect(variable, 'a'), 'proportion', 'duration')] %>% 
+  .[, 'treatment' := paste0('q27treat_', stringr::str_extract(variable, '\\d{1}$'))] %>% 
+  data.table::dcast.data.table(respid + country + treatment ~ metric,
+                               value.var = 'value') %>% 
+  .[, 'duration' := duration * proportion/100] %>% 
+  .[, sum(duration, na.rm = TRUE), by = 'respid'] %>% 
+  data.table::setnames('V1', 'q27duration')
+
+d1 <- d1[aux_d]

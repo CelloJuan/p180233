@@ -57,7 +57,6 @@ d$labels[d2, on = 'variable'] %>%
 ```
 
 ## Q11 Patient Progresion to Prostate Cancer
-
 ```{r 'q11_descr', echo=FALSE}
 d2 <- d1[, c(id_mask, 'country', q11_mask), with = F] %>% 
   data.table::melt.data.table(id.vars = c(id_mask, 'country'),
@@ -86,7 +85,7 @@ d$labels[d2, on = 'variable'] %>%
 
 ## Q12 Length of Time to Progression
 ```{r 'q12_descr', echo=FALSE}
-d2 <- d1[, c(id_mask, 'country', q12_mask), with = F] %>% 
+d2 <- d1[, c(id_mask, 'country', 'q12new_tot_1', 'q12new_tot_2'), with = F] %>% 
   data.table::melt.data.table(id.vars = c(id_mask, 'country'),
                               variable.factor = FALSE)
 
@@ -106,6 +105,91 @@ d$labels[d2, on = 'variable'] %>%
   kableExtra::kable(digits = 1,
                     escape = F,
                     caption = 'Bases - Q12') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+```
+
+## Q25 Metasttic Castrate REsistant Prostate Case Load
+```{r 'q25_descr', echo=FALSE}
+d2 <- d1[, c(id_mask, 'country', q25_mask), with = F] %>% 
+  data.table::melt.data.table(id.vars = c(id_mask, 'country'),
+                              variable.factor = FALSE)
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, mean(value, na.rm = TRUE), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Average Patient Load - Q25') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, sum(!is.na(value)), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Bases - Q25') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+```
+
+## Q26 Metastatic Castrate Resistant Prostate Cancer (M1 CR PC) currently on 1st line treatment Case Load
+```{r 'q26_descr', echo=FALSE}
+d2 <- d1[, c(id_mask, 'country', q26b_mask), with = F] %>% 
+  data.table::melt.data.table(id.vars = c(id_mask, 'country'),
+                              variable.factor = FALSE)
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, mean(value, na.rm = TRUE), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Average Treatment Duration (months) - Q26') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, sum(!is.na(value)), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Bases - Q26') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+```
+
+
+## Q27 Metastatic Castrate Resistant Prostate Cancer (M1 CR PC) currently on 2nd line treatment 
+```{r 'q27_descr', echo=FALSE}
+d2 <- d1[, c(id_mask, 'country', q27b_mask), with = F] %>% 
+  data.table::melt.data.table(id.vars = c(id_mask, 'country'),
+                              variable.factor = FALSE)
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, mean(value, na.rm = TRUE), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Average Treatment Duration (months) - Q27') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+d$labels[d2, on = 'variable'] %>% 
+  .[, sum(!is.na(value)), by = c('country', 'label', 'variable')] %>% 
+  data.table::dcast.data.table(variable + label ~ country, value.var = 'V1') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Bases - Q27') %>% 
   kableExtra::kable_styling(full_width = FALSE, 
                             position = 'center',
                             bootstrap_options = c("striped", "hover"))
@@ -238,8 +322,8 @@ d1[, 'weight_2_3' := q9_prop_q14_3/q9_prop_q14_3_mean] %>%
 
 d1[, c(id_mask, 
        'country', 
-       'q9_a_1', 
-       q11_mask, 
+       'q9_a_3', 
+       q14_mask, 
        'q9_prop_q14_1', 
        'q9_prop_q14_2',
        'q9_prop_q14_3',
@@ -253,6 +337,89 @@ d1[, c(id_mask,
 d1[['weight_2_1']] %>% hist(main = 'weight_2_1')
 d1[['weight_2_2']] %>% hist(main = 'weight_2_2')
 d1[['weight_2_3']] %>% hist(main = 'weight_2_3')
+```
+
+## mCRPC L1
+```{r mcrpsl1_weights, echo=FALSE}
+d1[, 'q9_prop_q25_1' := q9_a_7 * q25_1/100]
+
+d1[, c(id_mask, 'country', 'q9_a_7', 'q25_1', 'q9_prop_q25_1'), with = F] %>% 
+  head(10) %>% print
+
+d1[, c('country', 'q9_prop_q25_1'), with = F] %>% 
+  .[, mean(q9_prop_q25_1, na.rm = TRUE), by = 'country'] %>% 
+  data.table::setnames('V1', 'Re-prop. Q9') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Average case load, reproportioned by progression to mCRPC L1 - Q9_7 * Q25_1') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+aux_d <- d1[, c('country', 'q9_prop_q25_1'), with = F] %>% 
+  .[, list(mean(q9_prop_q25_1, na.rm = TRUE)),
+    by = 'country'] %>% 
+  data.table::setnames(c('V1'), c('q9_prop_q25_1_mean'))
+
+d1 <- d1[aux_d, on = 'country']
+
+d1[, 'weight_3_1' := q9_prop_q25_1/q9_prop_q25_1_mean] %>% 
+  .[, 'weight_3_1' := ifelse(weight_3_1 > 3, 3, weight_3_1)] %>% 
+  .[, 'weight_3_1' := ifelse(weight_3_1 < 0.3, 0.3, weight_3_1)]
+
+d1[, c(id_mask, 
+       'country', 
+       'q9_a_7', 
+       'q25_1', 
+       'q9_prop_q25_1', 
+       'q9_prop_q25_1_mean',
+       'weight_3_1'), with = F] %>% 
+  head(10) %>% 
+  print
+
+d1[['weight_3_1']] %>% hist(main = 'weight_3_1')
+```
+
+
+## mCRPC L2
+```{r mcrpsl2_weights, echo=FALSE}
+d1[, 'q9_prop_q25_2' := q9_a_7 * q25_2/100]
+
+d1[, c(id_mask, 'country', 'q9_a_7', 'q25_2', 'q9_prop_q25_2'), with = F] %>% 
+  head(10) %>% print
+
+d1[, c('country', 'q9_prop_q25_2'), with = F] %>% 
+  .[, mean(q9_prop_q25_2, na.rm = TRUE), by = 'country'] %>% 
+  data.table::setnames('V1', 'Re-prop. Q9') %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Average case load, reproportioned by progression to mCRPC L2 - Q9_7 * Q25_2') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+
+aux_d <- d1[, c('country', 'q9_prop_q25_2'), with = F] %>% 
+  .[, list(mean(q9_prop_q25_2, na.rm = TRUE)),
+    by = 'country'] %>% 
+  data.table::setnames(c('V1'), c('q9_prop_q25_2_mean'))
+
+d1 <- d1[aux_d, on = 'country']
+
+d1[, 'weight_3_2' := q9_prop_q25_2/q9_prop_q25_2_mean] %>% 
+  .[, 'weight_3_2' := ifelse(weight_3_2 > 3, 3, weight_3_2)] %>% 
+  .[, 'weight_3_2' := ifelse(weight_3_2 < 0.3, 0.3, weight_3_2)]
+
+d1[, c(id_mask, 
+       'country', 
+       'q9_a_7', 
+       'q25_2', 
+       'q9_prop_q25_2', 
+       'q9_prop_q25_2_mean',
+       'weight_3_2'), with = F] %>% 
+  head(10) %>% 
+  print
+
+d1[['weight_3_2']] %>% hist(main = 'weight_3_2')
 ```
 
 # Weighted Means and Medians
@@ -354,3 +521,62 @@ out_2 %>%
                             position = 'center',
                             bootstrap_options = c("striped", "hover"))
 ```
+
+
+## mCPRC L1
+```{r mcprcl1_out_stats, echo=FALSE}
+out_3 <- data.table::rbindlist(list(d1[, .(country, 
+                                           q26duration,
+                                           weight_3_1)] %>% 
+                                      .[complete.cases(.)] %>% 
+                                      .[, list(mCRPCL1_wtmean = weighted.mean(q26duration, weight_3_1),
+                                               mCRPCL1_wtmedian = matrixStats::weightedMedian(q26duration, weight_3_1))] %>% 
+                                      .[, 'country' := 'Total'],
+                                    d1[, .(country, 
+                                           q26duration,
+                                           weight_3_1)] %>% 
+                                      .[complete.cases(.)] %>% 
+                                      .[, list(mCRPCL1_wtmean = weighted.mean(q26duration, weight_3_1),
+                                               mCRPCL1_wtmedian = matrixStats::weightedMedian(q26duration, weight_3_1)),
+                                        by = 'country']),
+                               use.names = TRUE) %>% 
+  data.table::setcolorder(c(3, 1:1))
+
+out_3 %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Weighted time to progression (months) mCRPC L1') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+```
+
+
+## mCPRC L2
+```{r mcprcl2_out_stats, echo=FALSE}
+out_3 <- data.table::rbindlist(list(d1[, .(country, 
+                                           q27duration,
+                                           weight_3_2)] %>% 
+                                      .[complete.cases(.)] %>% 
+                                      .[, list(mCRPCL2_wtmean = weighted.mean(q27duration, weight_3_2),
+                                               mCRPCL2_wtmedian = matrixStats::weightedMedian(q27duration, weight_3_2))] %>% 
+                                      .[, 'country' := 'Total'],
+                                    d1[, .(country, 
+                                           q27duration,
+                                           weight_3_2)] %>% 
+                                      .[complete.cases(.)] %>% 
+                                      .[, list(mCRPCL2_wtmean = weighted.mean(q27duration, weight_3_2),
+                                               mCRPCL2_wtmedian = matrixStats::weightedMedian(q27duration, weight_3_2)),
+                                        by = 'country']),
+                               use.names = TRUE) %>% 
+  data.table::setcolorder(c(3, 1:1))
+
+out_3 %>% 
+  kableExtra::kable(digits = 1,
+                    escape = F,
+                    caption = 'Weighted time to progression (months) mCRPC L2') %>% 
+  kableExtra::kable_styling(full_width = FALSE, 
+                            position = 'center',
+                            bootstrap_options = c("striped", "hover"))
+```
+
