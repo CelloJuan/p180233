@@ -540,7 +540,7 @@ out_3 <- data.table::rbindlist(list(d1[, .(country,
                                                mCRPCL1_wtmedian = matrixStats::weightedMedian(q26duration, weight_3_1)),
                                         by = 'country']),
                                use.names = TRUE) %>% 
-  data.table::setcolorder(c(3, 1:1))
+  data.table::setcolorder(c(3, 1:2))
 
 out_3 %>% 
   kableExtra::kable(digits = 1,
@@ -554,7 +554,7 @@ out_3 %>%
 
 ## mCPRC L2
 ```{r mcprcl2_out_stats, echo=FALSE}
-out_3 <- data.table::rbindlist(list(d1[, .(country, 
+out_4 <- data.table::rbindlist(list(d1[, .(country, 
                                            q27duration,
                                            weight_3_2)] %>% 
                                       .[complete.cases(.)] %>% 
@@ -569,9 +569,9 @@ out_3 <- data.table::rbindlist(list(d1[, .(country,
                                                mCRPCL2_wtmedian = matrixStats::weightedMedian(q27duration, weight_3_2)),
                                         by = 'country']),
                                use.names = TRUE) %>% 
-  data.table::setcolorder(c(3, 1:1))
+  data.table::setcolorder(c(3, 1:2))
 
-out_3 %>% 
+out_4 %>% 
   kableExtra::kable(digits = 1,
                     escape = F,
                     caption = 'Weighted time to progression (months) mCRPC L2') %>% 
